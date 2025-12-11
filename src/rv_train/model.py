@@ -37,7 +37,8 @@ def load_model_for_training(
     """
     kwargs = {"torch_dtype": torch.bfloat16}
     if use_flash_attention:
-        kwargs["attn_implementation"] = "kernels-community/flash-attn3"  # "flash_attention_2"
+        # switch to kernels-community/flash-attn2 / flash_attention_3 / flash_attention_2 if necessary
+        kwargs["attn_implementation"] = "kernels-community/flash-attn3"
 
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_id, **kwargs)
     return model
