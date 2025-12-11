@@ -38,12 +38,18 @@ We reproduce VLA-0's training with comparable results.
 
 <!-- TODO: upgrade lerobot -->
 
+We recommend using [`uv`](https://docs.astral.sh/uv/) for managing dependencies.
+
 ```bash
-pip install -e .
-pip install git+https://github.com/huggingface/lerobot.git@f39652707caed42a7cd5ab36066da5663b9565eb  # LeRobot dependency
+uv venv --python 3.11
+uv pip install -e .
+GIT_LFS_SKIP_SMUDGE=1 uv pip install git+https://github.com/huggingface/lerobot.git@f39652707caed42a7cd5ab36066da5663b9565eb  # LeRobot dependency
 
 # For evaluation
-pip install -e ".[eval]"
+uv pip install -e ".[eval]"
+
+# Do not forget activating your venv
+source .venv/bin/activate
 ```
 
 ## Usage
