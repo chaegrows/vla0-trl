@@ -18,7 +18,7 @@ source .venv/bin/activate
 
 # Config
 MODEL_PATH="./runs/vla0_sft-lr4e-5-gradclip/checkpoint-200000"
-LOG_DIR="./eval_logs/vla0_sft-lr4e-5-gradclip/checkpoint-200000/horizon-1"
+LOG_DIR="./eval_logs/vla0_sft-lr4e-5-gradclip/checkpoint-200000"
 NUM_SHARDS=50
 NUM_TASKS=8
 MAX_SUBTASKS=7  # ceil(NUM_SHARDS / NUM_TASKS)
@@ -36,8 +36,8 @@ for i in $(seq 0 $(('"$MAX_SUBTASKS"' - 1))); do
     python scripts/eval.py \
         --model_path '"$MODEL_PATH"' \
         --log_dir '"$LOG_DIR"' \
-        --action_horizon 1 \
-        --ensemble_prediction 0 \
+        --action_horizon 8 \
+        --ensemble_prediction 8 \
         --torch_compile \
         --skip_evaluated \
         --shard_id $SHARD_ID --num_shards '"$NUM_SHARDS"' &

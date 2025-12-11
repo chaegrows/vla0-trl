@@ -34,17 +34,6 @@ We reproduce VLA-0's training with comparable results.
 
 <!-- TODO: open-source intermediate checkpoints and results -->
 
-## Limitations
-
-- **LIBERO only** — other environments not ported
-- **Qwen2-VL only** — other backbones not supported
-
-## Known Issues
-
-### Ensemble Prediction is Non-Functional (inherited from original)
-
-Both the original VLA-0 (`libs/RoboVerse/roboverse/evals/libero/eval.py`) and this refactored implementation have a bug where `--ensemble_prediction` has **no effect** when `action_horizon >= horizon`. The ensemble logic trims previous chunks by `action_horizon` each step (`old_chunk = old_chunk[action_horizon:]`), which produces an empty array when `action_horizon == horizon`. With default settings (`horizon=8`, `action_horizon=8`), ensemble is completely disabled regardless of `--ensemble_prediction` value.
-
 ## Installation
 
 <!-- TODO: upgrade lerobot -->
@@ -118,6 +107,17 @@ See [`configs/vla0.yaml`](configs/vla0.yaml). Key parameters:
     ├── rv_train/           # Dataset, collator, model
     └── rv_eval/            # LIBERO evaluator
 ```
+
+## Limitations (inherited from VLA-0)
+
+- **LIBERO only** — other environments not ported
+- **Qwen2-VL only** — other backbones not supported
+
+## Known Issues
+
+### Ensemble Prediction is Non-Functional (inherited from original)
+
+Both the original VLA-0 (`libs/RoboVerse/roboverse/evals/libero/eval.py`) and this refactored implementation have a bug where `--ensemble_prediction` has **no effect** when `action_horizon >= horizon`. The ensemble logic trims previous chunks by `action_horizon` each step (`old_chunk = old_chunk[action_horizon:]`), which produces an empty array when `action_horizon == horizon`. With default settings (`horizon=8`, `action_horizon=8`), ensemble is completely disabled regardless of `--ensemble_prediction` value.
 
 ## Attribution
 
