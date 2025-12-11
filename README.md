@@ -145,11 +145,23 @@ This is a derivative work of [VLA-0](https://github.com/NVlabs/vla0) by NVIDIA.
 
 Licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 
+## Citation
+
+If you use this code, please cite both this repository and the original VLA-0 paper:
+
 ```bibtex
+@misc{vla0-trl,
+  author = {Suhwan Choi},
+  title = {vla0-trl: Minimal VLA-0 Reimplementation with TRL},
+  year = {2025},
+  publisher = {GitHub},
+  url = {https://github.com/MilkClouds/vla0-trl}
+}
+
 @article{goyal2025vla0,
   title={VLA-0: Building State-of-the-Art VLAs with Zero Modification},
-  author={Goyal, Ankit and others},
-  journal={arXiv preprint arXiv:2503.14734},
+  author={Goyal, Ankit and Hadfield, Hugo and Yang, Xuning and Blukis, Valts and Ramos, Fabio},
+  journal={arXiv preprint arXiv:2510.13054},
   year={2025}
 }
 ```
