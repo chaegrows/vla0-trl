@@ -1,12 +1,13 @@
 """LIBERO dataset for VLA-0 training with SFTTrainer."""
 
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
+import torchvision.transforms.functional as TF
+from einops import rearrange
+from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from PIL import Image
 from torch.utils.data import Dataset
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
-from einops import rearrange
-from typing import Dict, List, Optional, Tuple
-import torchvision.transforms.functional as TF
 
 
 class LiberoDataset(Dataset):
@@ -71,7 +72,12 @@ class LiberoDataset(Dataset):
         self.state_key = state_key
 
         # Compute stats
-        self.stats = self._compute_stats()
+        act_stats = self.dataset.meta.stats[self.action_key]
+        del act_stats["mean"]
+        del act_stats["std"]
+        self.stats = {
+            "out_ori_act": act_stats,
+        }
 
         # System prompt
         self.system_prompt = (
@@ -81,26 +87,6 @@ class LiberoDataset(Dataset):
             f"(0-{num_bins} each), representing the {horizon} timesteps "
             f"sequentially. Provide only space separated numbers. Nothing else."
         )
-
-    def _compute_stats(self) -> Dict:
-        """Compute action statistics for normalization (future actions only)."""
-        all_actions = []
-        sample_size = min(len(self.dataset), 10000)
-        indices = np.random.choice(len(self.dataset), sample_size, replace=False)
-
-        for idx in indices:
-            sample = self.dataset[int(idx)]  # Convert np.int64 to int
-            all_act = sample[self.action_key].numpy()
-            future_actions = all_act[self.history :]  # Only future actions
-            all_actions.append(future_actions)
-
-        all_actions = np.concatenate(all_actions, axis=0)
-        return {
-            "out_ori_act": {
-                "min": all_actions.min(axis=0).tolist(),
-                "max": all_actions.max(axis=0).tolist(),
-            }
-        }
 
     def __len__(self) -> int:
         return len(self.dataset)
