@@ -68,12 +68,12 @@ def _original_collate(processor, messages, images):
     Replicates rv_train/models/qwen/model.py get_qwen_inputs + label masking.
     Returns (input_ids, labels, attention_mask) for comparison.
     """
-    # Apply chat template with add_vision_id=True (from configs/vla0.yaml line 26)
+    # Apply chat template with add_vision_id=False. Original VLA-0 config intend add_vision_id=True but on transformers v4.51.3 which original VLA-0 use, it has no effect
     text = processor.apply_chat_template(
         messages,
         tokenize=False,
         add_generation_prompt=False,
-        add_vision_id=False,  # Original VLA-0 config uses this
+        add_vision_id=False,
     )
 
     inputs = processor(
