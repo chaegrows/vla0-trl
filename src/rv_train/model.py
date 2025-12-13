@@ -4,6 +4,7 @@ import json
 from typing import Optional
 
 import torch
+from qwen_vl_utils import process_vision_info
 from transformers import LogitsProcessor, Qwen2_5_VLProcessor
 from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
 
@@ -68,6 +69,7 @@ class QwenVLActor:
     def __init__(
         self,
         model_path: str,
+        *,
         stats_path: Optional[str] = None,
         horizon: int = 8,
         action_dim: int = 7,
@@ -80,8 +82,8 @@ class QwenVLActor:
         self.num_bins = num_bins
         self.device = device
 
-        self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_path, torch_dtype=torch.bfloat16).to(
-            device
+        self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+            model_path, torch_dtype=torch.bfloat16, device_map=device
         )
         self.model.eval()
 
@@ -118,14 +120,13 @@ class QwenVLActor:
             messages, tokenize=False, add_generation_prompt=True, add_vision_id=False
         )
 
-        from qwen_vl_utils import process_vision_info
-
         image_inputs = process_vision_info(messages)[0]
 
         inputs = self.processor(text=[text], images=[image_inputs], return_tensors="pt")
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-        gen_kwargs = {"max_new_tokens": 1024, "logits_processor": [self.logits_processor]}
+        # NOTE: you must increase this value if you use longer horizon! for horizon=8, 208 tokens
+        gen_kwargs = {"max_new_tokens": 256, "logits_processor": [self.logits_processor]}
         if temperature > 0:
             gen_kwargs["temperature"] = temperature
         else:
