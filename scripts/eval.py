@@ -15,6 +15,12 @@ def parse_args():
     # Model
     parser.add_argument("--model_path", type=str, required=True, help="Path to trained model checkpoint")
     parser.add_argument(
+        "--base_model_id",
+        type=str,
+        default=None,
+        help="Base model id/path for LoRA checkpoints (optional; auto-inferred from adapter_config.json when possible)",
+    )
+    parser.add_argument(
         "--stats_path", type=str, default=None, help="Path to dataset_stats.json (auto-detected if not specified)"
     )
 
@@ -58,6 +64,13 @@ def parse_args():
     parser.add_argument("--img_size", type=int, default=224)
     parser.add_argument("--crop_ratio", type=float, default=0.875)
     parser.add_argument("--tile_images", action="store_true", default=True)
+    parser.add_argument(
+        "--use_wrist_image",
+        action="store_true",
+        default=True,
+        help="Use wrist camera during eval (requires --tile_images). Disable with --no_wrist_image.",
+    )
+    parser.add_argument("--no_wrist_image", dest="use_wrist_image", action="store_false")
 
     # Output
     parser.add_argument(
@@ -109,6 +122,7 @@ def main():
 
     model = QwenVLActor(
         model_path=args.model_path,
+        base_model_id=args.base_model_id,
         stats_path=stats_path,
         horizon=args.horizon,
         action_dim=args.action_dim,
@@ -126,6 +140,7 @@ def main():
         img_size=args.img_size,
         crop_ratio=args.crop_ratio,
         tile_images=args.tile_images,
+        use_wrist_image=args.use_wrist_image,
         shard_id=args.shard_id,
         num_shards=args.num_shards,
         skip_evaluated=args.skip_evaluated,

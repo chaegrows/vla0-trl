@@ -1,6 +1,7 @@
 """Model loading utilities for VLA-0."""
 
 import json
+from pathlib import Path
 from typing import Optional
 
 import torch
@@ -30,11 +31,16 @@ class NumberSpaceOnlyProcessor(LogitsProcessor):
 def load_model_for_training(
     model_id: str = "Qwen/Qwen2.5-VL-3B-Instruct",
     use_flash_attention: bool = False,
+    finetune_mode: str = "full",  # "full" | "lora"
+    lora_r: int = 16,
+    lora_alpha: int = 32,
+    lora_dropout: float = 0.05,
 ) -> Qwen2_5_VLForConditionalGeneration:
-    """Load Qwen2.5-VL for full fine-tuning (no LoRA/QLoRA).
+    """Load Qwen2.5-VL for training.
 
-    REVIEW: Original code supported LoRA/QLoRA. This version does full fine-tuning
-    as per paper's best results. Add LoRA support if needed.
+    Notes:
+    - `finetune_mode="full"` does full fine-tuning (paper setting; needs lots of VRAM).
+    - `finetune_mode="lora"` applies PEFT LoRA adapters to drastically reduce VRAM.
     """
     kwargs = {"torch_dtype": torch.bfloat16}
     if use_flash_attention:
@@ -42,6 +48,46 @@ def load_model_for_training(
         kwargs["attn_implementation"] = "kernels-community/flash-attn3"
 
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_id, **kwargs)
+    # KV cache is not needed for training and can waste memory.
+    if hasattr(model, "config") and getattr(model.config, "use_cache", None) is True:
+        model.config.use_cache = False
+
+    if finetune_mode not in {"full", "lora"}:
+        raise ValueError(f"Unknown finetune_mode={finetune_mode!r}. Expected 'full' or 'lora'.")
+
+    if finetune_mode == "lora":
+        try:
+            from peft import LoraConfig, get_peft_model
+        except ImportError as e:
+            raise ImportError(
+                "finetune_mode='lora' requires `peft`. Install with `pip install peft` "
+                "or `uv pip install -e '.[lora]'`."
+            ) from e
+
+        # Try to infer a good default set of target module names from the loaded model.
+        candidate_targets = ("q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj")
+        found = set()
+        for name, _module in model.named_modules():
+            leaf = name.rsplit(".", 1)[-1]
+            if leaf in candidate_targets:
+                found.add(leaf)
+
+        if not found:
+            raise ValueError(
+                "Could not infer LoRA target modules for this model. "
+                "Please update `candidate_targets` in rv_train/model.py for this architecture."
+            )
+
+        peft_config = LoraConfig(
+            r=lora_r,
+            lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
+            bias="none",
+            task_type="CAUSAL_LM",
+            target_modules=sorted(found),
+        )
+        model = get_peft_model(model, peft_config)
+
     return model
 
 
@@ -70,6 +116,7 @@ class QwenVLActor:
         self,
         model_path: str,
         *,
+        base_model_id: Optional[str] = None,
         stats_path: Optional[str] = None,
         horizon: int = 8,
         action_dim: int = 7,
@@ -82,15 +129,53 @@ class QwenVLActor:
         self.num_bins = num_bins
         self.device = device
 
-        self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-            model_path, torch_dtype=torch.bfloat16, device_map=device
-        )
+        model_dir = Path(model_path)
+        adapter_cfg = model_dir / "adapter_config.json"
+
+        # Support LoRA checkpoints saved via PEFT/TRL: the directory contains adapter weights,
+        # not full model weights. In that case, load base model then attach adapters.
+        if adapter_cfg.exists():
+            try:
+                from peft import PeftModel
+            except ImportError as e:
+                raise ImportError(
+                    "This checkpoint looks like a LoRA adapter (adapter_config.json present) "
+                    "but `peft` is not installed. Install with `pip install peft` or `uv pip install -e '.[lora]'`."
+                ) from e
+
+            adapter_conf = json.loads(adapter_cfg.read_text())
+            inferred_base = adapter_conf.get("base_model_name_or_path")
+            base_id = base_model_id or inferred_base
+            if not base_id:
+                raise ValueError(
+                    "Could not infer base model id for LoRA adapter. Pass --base_model_id (eval.py) "
+                    "or ensure adapter_config.json contains base_model_name_or_path."
+                )
+
+            base = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                base_id, torch_dtype=torch.bfloat16, device_map=device
+            )
+            # KV cache not needed for our generate settings and can waste memory.
+            if hasattr(base, "config") and getattr(base.config, "use_cache", None) is True:
+                base.config.use_cache = False
+
+            self.model = PeftModel.from_pretrained(base, model_path)
+        else:
+            self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                model_path, torch_dtype=torch.bfloat16, device_map=device
+            )
         self.model.eval()
 
         if torch_compile:
             self.model = torch.compile(self.model)
 
-        self.processor = Qwen2_5_VLProcessor.from_pretrained(model_path)
+        # Prefer loading processor from checkpoint dir (train.py saves it there); fallback to base model.
+        try:
+            self.processor = Qwen2_5_VLProcessor.from_pretrained(model_path)
+        except Exception:
+            if base_model_id is None:
+                raise
+            self.processor = Qwen2_5_VLProcessor.from_pretrained(base_model_id)
         self.logits_processor = NumberSpaceOnlyProcessor(self.processor.tokenizer)
 
         # Load stats

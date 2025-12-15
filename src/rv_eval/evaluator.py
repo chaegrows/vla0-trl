@@ -27,9 +27,12 @@ def preprocess_obs(
     img_size: int = 224,
     crop_ratio: float = 0.875,
     tile_images: bool = True,
+    use_wrist_image: bool = True,
 ) -> Image.Image:
     """Preprocess LIBERO observation for model input."""
-    cams = ["agentview_image", "robot0_eye_in_hand_image"]
+    cams = ["agentview_image"]
+    if use_wrist_image:
+        cams.append("robot0_eye_in_hand_image")
     images = []
 
     for cam in cams:
@@ -51,11 +54,14 @@ def preprocess_obs(
         img = img.permute(1, 2, 0).numpy()
         images.append(img)
 
-    if tile_images:
+    if len(images) > 1 and not tile_images:
+        raise ValueError("use_wrist_image=True requires tile_images=True (eval path returns a single image).")
+
+    if tile_images and len(images) > 1:
         tiled = np.concatenate(images, axis=1)
         return Image.fromarray(tiled)
 
-    return [Image.fromarray(img) for img in images]
+    return Image.fromarray(images[0])
 
 
 class LiberoEvaluator:

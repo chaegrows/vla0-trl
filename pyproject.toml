@@ -41,6 +41,9 @@ eval = [
     "libero @ git+https://github.com/MilkClouds/LIBERO.git@minor-fix",  # fork with relaxed deps & modern packaging
     "robosuite",
 ]
+lora = [
+    "peft>=0.13.0",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",

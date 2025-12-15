@@ -74,6 +74,10 @@ source .venv/bin/activate
 # Single GPU
 python scripts/train.py --config configs/vla0.yaml
 
+# Single GPU (low VRAM): LoRA + smaller vision input
+uv pip install -e ".[lora]"  # or: pip install peft
+python scripts/train.py --config configs/vla0_lora_single_gpu.yaml
+
 # Multi-GPU
 accelerate launch --num_processes=8 scripts/train.py --config configs/vla0.yaml
 ```
@@ -90,6 +94,10 @@ python scripts/eval.py \
     --skip_evaluated \
     --shard_id 0 --num_shards 10
 ```
+
+**LoRA checkpoints**: point `--model_path` to the directory that contains `adapter_config.json` (e.g. `./runs/.../final`).
+If auto-detection fails, pass `--base_model_id` (e.g. `Qwen/Qwen2.5-VL-3B-Instruct`).  
+If you trained with a single camera, add `--no_wrist_image` to match training.
 
 | Argument | Description |
 |----------|-------------|
