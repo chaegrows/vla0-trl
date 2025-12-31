@@ -60,7 +60,10 @@ uv pip install -e .
 GIT_LFS_SKIP_SMUDGE=1 uv pip install git+https://github.com/huggingface/lerobot.git@f39652707caed42a7cd5ab36066da5663b9565eb
 
 # For evaluation
-uv pip install -e ".[eval]"
+uv pip install -e ".[eval]" 
+# if you have egl-prob==1.0.2 error 
+# export CMAKE_POLICY_VERSION_MINIMUM=3.5
+# uv pip install -e ".[eval]"
 
 # Do not forget activating your venv
 source .venv/bin/activate

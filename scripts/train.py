@@ -11,6 +11,9 @@ from rv_train.collator import VLACollator
 from rv_train.dataset import LiberoDataset
 from rv_train.model import load_model_for_training, load_processor
 
+import os
+
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 @dataclass
 class ModelArguments:
